@@ -237,14 +237,12 @@ func (ex *Exchange) handlePlaceOrder(c echo.Context) error {
 	}
 
 	market := placeOrderData.Market
-	ob := ex.orderbooks[market]
 	order := orderbook.NewOrder(placeOrderData.Bid, placeOrderData.Size, placeOrderData.UserID)
 
 	if placeOrderData.Type == LimitOrder {
 		if err := ex.handlePlaceLimitOrder(market, placeOrderData.Price, order); err != nil {
 			return err
 		}
-		ob.PlaceLimitOrder(placeOrderData.Price, order)
 		return c.JSON(200, map[string]any{"msg": "limit order placed"})
 	}
 	if placeOrderData.Type == MarketOrder {
