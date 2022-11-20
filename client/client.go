@@ -10,11 +10,12 @@ import (
 
 const Endpoint = "http://localhost:3000"
 
-type PlaceLimitOrderParams struct {
+type PlaceOrderParams struct {
 	UserID int64
 	Bid    bool
-	Price  float64
-	Size   float64
+	// price only for limit orders
+	Price float64
+	Size  float64
 }
 
 type Client struct {
@@ -27,7 +28,53 @@ func NewClient() *Client {
 	}
 }
 
-func (c *Client) PlaceLimitOrder(p *PlaceLimitOrderParams) error {
+func (c *Client) PlaceMarketOrder(p *PlaceOrderParams) (*server.PlaceOrderResponce, error) {
+	params := &server.PlaceOrderRequest{
+		UserID: p.UserID,
+		Type:   server.MarketOrder,
+		Bid:    p.Bid,
+		Size:   p.Size,
+		Market: server.MarketETH,
+	}
+
+	body, err := json.Marshal(params)
+	if err != nil {
+		return nil, err
+	}
+
+	e := Endpoint + "/order"
+	req, err := http.NewRequest(http.MethodPost, e, bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := c.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	placeOrderResponce := &server.PlaceOrderResponce{}
+	if err := json.NewDecoder(resp.Body).Decode(placeOrderResponce); err != nil {
+		return nil, err
+	}
+	return placeOrderResponce, nil
+}
+
+func (c *Client) CancelOrder(orderID int64) error {
+	e := fmt.Sprintf("%s/order/%d", Endpoint, orderID)
+	req, err := http.NewRequest(http.MethodDelete, e, nil)
+	if err != nil {
+		return err
+	}
+
+	_, err = c.Do(req)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *Client) PlaceLimitOrder(p *PlaceOrderParams) (*server.PlaceOrderResponce, error) {
 	params := &server.PlaceOrderRequest{
 		UserID: p.UserID,
 		Type:   server.LimitOrder,
@@ -39,20 +86,23 @@ func (c *Client) PlaceLimitOrder(p *PlaceLimitOrderParams) error {
 
 	body, err := json.Marshal(params)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	e := Endpoint + "/order"
 	req, err := http.NewRequest(http.MethodPost, e, bytes.NewReader(body))
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	resp, err := c.Do(req)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	fmt.Printf("%+v", resp)
-	return nil
+	placeOrderResponce := &server.PlaceOrderResponce{}
+	if err := json.NewDecoder(resp.Body).Decode(placeOrderResponce); err != nil {
+		return nil, err
+	}
+	return placeOrderResponce, nil
 }

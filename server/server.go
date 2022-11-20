@@ -188,6 +188,8 @@ func (ex *Exchange) cancelOrder(c echo.Context) error {
 	order := ob.Orders[int64(id)]
 	ob.CancelOrder(order)
 
+	log.Println("order canceled id -> ", id)
+
 	return c.JSON(200, map[string]any{"msg": "order deleted"})
 }
 
@@ -206,7 +208,7 @@ func (ex *Exchange) handlePlaceMarketOrder(market Market, order *orderbook.Order
 	if order.Bid {
 		isBid = true
 	}
-
+	totalSizeFilled := 0.0
 	for i := 0; i < len(matchedOrders); i++ {
 		id := matches[i].Bid.ID
 		if isBid {
@@ -217,7 +219,13 @@ func (ex *Exchange) handlePlaceMarketOrder(market Market, order *orderbook.Order
 			Size:  matches[i].SizeFilled,
 			Price: matches[i].Price,
 		}
+		totalSizeFilled += matches[i].SizeFilled
 	}
+	avgPrice := 0.0
+	for i := 0; i < len(matches); i++ {
+		avgPrice += matches[i].Price / totalSizeFilled * matches[i].SizeFilled
+	}
+	log.Printf("filled MARKET order -> %d | size [%.2f] | avgPrice [%.2f]", order.ID, totalSizeFilled, avgPrice)
 	return matches, matchedOrders
 }
 
@@ -225,9 +233,13 @@ func (ex *Exchange) handlePlaceLimitOrder(market Market, price float64, order *o
 	ob := ex.orderbooks[market]
 	ob.PlaceLimitOrder(price, order)
 
-	log.Printf("new LIMIT order ->  price [%.2f | size [%.2f]", order.Limit.Price, order.Size)
+	log.Printf("new LIMIT order -> type: [%t] | price [%.2f | size [%.2f]", order.Bid, order.Limit.Price, order.Size)
 
 	return nil
+}
+
+type PlaceOrderResponce struct {
+	OrderID int64
 }
 
 func (ex *Exchange) handlePlaceOrder(c echo.Context) error {
@@ -243,17 +255,19 @@ func (ex *Exchange) handlePlaceOrder(c echo.Context) error {
 		if err := ex.handlePlaceLimitOrder(market, placeOrderData.Price, order); err != nil {
 			return err
 		}
-		return c.JSON(200, map[string]any{"msg": "limit order placed"})
 	}
+
 	if placeOrderData.Type == MarketOrder {
-		matches, matchedOrders := ex.handlePlaceMarketOrder(market, order)
+		matches, _ := ex.handlePlaceMarketOrder(market, order)
 
 		if err := ex.handleMatches(matches); err != nil {
 			return err
 		}
-		return c.JSON(200, map[string]any{"matches": matchedOrders})
 	}
-	return nil
+	resp := &PlaceOrderResponce{
+		OrderID: order.ID,
+	}
+	return c.JSON(200, resp)
 }
 
 func (ex *Exchange) handleMatches(matches []orderbook.Match) error {

@@ -12,34 +12,45 @@ func main() {
 	time.Sleep(1 * time.Second)
 
 	c := client.NewClient()
-
-	bidParams := &client.PlaceLimitOrderParams{
-		UserID: 8,
-		Bid:    true,
-		Price:  10_000,
-		Size:   1000,
-	}
-	go func() {
-
-		for {
-			if err := c.PlaceLimitOrder(bidParams); err != nil {
-				panic(err)
-			}
-			time.Sleep(1 * time.Second)
-		}
-	}()
-
-	askParams := &client.PlaceLimitOrderParams{
-		UserID: 8,
-		Bid:    false,
-		Price:  8_000,
-		Size:   1000,
-	}
 	for {
-		if err := c.PlaceLimitOrder(askParams); err != nil {
+		limitOrderParams := &client.PlaceOrderParams{
+			UserID: 8,
+			Bid:    false,
+			Price:  10_000,
+			Size:   320,
+		}
+		_, err := c.PlaceLimitOrder(limitOrderParams)
+		if err != nil {
 			panic(err)
 		}
+		// fmt.Println("placed limit order from the client -> ", resp.OrderID)
+
+		otherLimitOrderParams := &client.PlaceOrderParams{
+			UserID: 8,
+			Bid:    false,
+			Price:  7_000,
+			Size:   680,
+		}
+		_, err = c.PlaceLimitOrder(otherLimitOrderParams)
+		if err != nil {
+			panic(err)
+		}
+
+		marketOrderParams := &client.PlaceOrderParams{
+			UserID: 7,
+			Bid:    true,
+			Price:  10_000,
+			Size:   1000,
+		}
+		_, err = c.PlaceMarketOrder(marketOrderParams)
+		if err != nil {
+			panic(err)
+		}
+		// fmt.Println("placed market order from the client -> ", resp.OrderID)
+
 		time.Sleep(1 * time.Second)
+
 	}
+
 	select {}
 }
