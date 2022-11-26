@@ -2,6 +2,7 @@ package orderbook
 
 import (
 	"fmt"
+	"log"
 	"math/rand"
 	"sort"
 	"sync"
@@ -230,6 +231,7 @@ func (ob *Orderbook) PlaceLimitOrder(price float64, o *Order) {
 }
 
 func (ob *Orderbook) clearLimit(bid bool, l *Limit) {
+	log.Printf("limit %v was deleted", l.Price)
 	if bid {
 		delete(ob.BidLimits, l.Price)
 		for i := 0; i < len(ob.bids); i++ {
