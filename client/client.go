@@ -3,6 +3,7 @@ package client
 import (
 	"bytes"
 	"encoding/json"
+	"exchanger/orderbook"
 	"exchanger/server"
 	"fmt"
 	"net/http"
@@ -26,6 +27,24 @@ func NewClient() *Client {
 	return &Client{
 		Client: http.DefaultClient,
 	}
+}
+
+func (c *Client) GetTrades(market string) ([]*orderbook.Trade, error) {
+	e := fmt.Sprintf("%s/trades/%s", Endpoint, market)
+	req, err := http.NewRequest(http.MethodGet, e, nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := c.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	trades := []*orderbook.Trade{}
+
+	if err := json.NewDecoder(resp.Body).Decode(&trades); err != nil {
+		return nil, err
+	}
+	return trades, nil
 }
 
 func (c *Client) GetOrders(userID int64) (*server.GetOrdersResponce, error) {

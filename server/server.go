@@ -57,6 +57,10 @@ type OrderbookData struct {
 	Bids           []*Order
 }
 
+type APIError struct {
+	Error string
+}
+
 func StartServer() {
 	e := echo.New()
 	e.HTTPErrorHandler = httpErrorHandler
@@ -78,6 +82,7 @@ func StartServer() {
 	user7 := NewUser(pkStr7, 7)
 	ex.Users[user7.ID] = user7
 
+	e.GET("/trades/:market", ex.handleGetTrades)
 	e.GET("/order/:userID", ex.handleGetOrders)
 	e.GET("/book/:market", ex.handleGetBook)
 	e.POST("/order", ex.handlePlaceOrder)
@@ -148,6 +153,17 @@ type GetOrdersResponce struct {
 	Bids []Order
 }
 
+func (ex *Exchange) handleGetTrades(c echo.Context) error {
+	market := Market(c.Param("market"))
+
+	ob, ok := ex.orderbooks[market]
+	if !ok {
+		return c.JSON(http.StatusBadRequest, APIError{Error: "orderbook not found"})
+	}
+
+	return c.JSON(http.StatusOK, ob.Trades)
+}
+
 func (ex *Exchange) handleGetOrders(c echo.Context) error {
 	userIDStr := c.Param("userID")
 	userID, err := strconv.Atoi(userIDStr)
@@ -163,6 +179,11 @@ func (ex *Exchange) handleGetOrders(c echo.Context) error {
 	}
 
 	for i := 0; i < len(orderbookOrders); i++ {
+		if orderbookOrders[i].Limit == nil {
+			fmt.Printf("the limit of the order is NIL %+v\n", orderbookOrders[i])
+			continue
+		}
+
 		order := Order{
 			ID:        orderbookOrders[i].ID,
 			UserID:    orderbookOrders[i].UserID,

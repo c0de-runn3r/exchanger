@@ -20,10 +20,18 @@ var (
 func marketOrderPlacer(c *client.Client) {
 	ticker := time.NewTicker(tick)
 	for {
+		trades, err := c.GetTrades("ETH")
+		if err != nil {
+			panic(err)
+		}
+		if len(trades) > 0 {
+			fmt.Printf("LAST TRADE PRICE -> %.2f\n", trades[len(trades)-1].Price)
+		}
+
 		marketSellOrder := &client.PlaceOrderParams{
 			UserID: 8,
 			Bid:    false,
-			Size:   900,
+			Size:   3000,
 		}
 		sellOrderResp, err := c.PlaceMarketOrder(marketSellOrder)
 		if err != nil {
@@ -43,10 +51,12 @@ func marketOrderPlacer(c *client.Client) {
 	}
 }
 
+const userID = 7
+
 func makeMarketSimple(c *client.Client) {
 	ticker := time.NewTicker(tick)
 	for {
-		orders, err := c.GetOrders(7)
+		orders, err := c.GetOrders(userID)
 		if err != nil {
 			log.Println(err)
 		}
